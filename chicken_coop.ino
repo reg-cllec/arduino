@@ -28,16 +28,16 @@ void loop() {
 }
 
 void automatic() {  
-  if (digitalRead(autoClosePin) == LOW && analogRead(lightSensor) < 800) {
+  if (digitalRead(autoClosePin) == LOW && analogRead(lightSensor) < 500) {
     delay(1000);
-    operateDoor(true); // Close the door
-  } else if ( digitalRead(autoOpenPin) == LOW && analogRead(lightSensor) > 800) {
+    operateDoor(true, false); // Close the door
+  } else if ( digitalRead(autoOpenPin) == LOW && analogRead(lightSensor) > 500) {
     delay(1000);
-    operateDoor(false); // Open the door
+    operateDoor(false, false); // Open the door
   }
 }
 
-void operateDoor(bool closeDoorFlag) {
+void operateDoor(bool closeDoorFlag, bool isManual) {
   int dirPin1, dirPin2;
 
   if (closeDoorFlag) {
@@ -48,15 +48,29 @@ void operateDoor(bool closeDoorFlag) {
     dirPin2 = LOW;
   }
 
-  // Check for the opposite condition when closeDoorFlag is false
-  while (digitalRead(closeDoorFlag ? autoClosePin : autoOpenPin) != HIGH) {
-    analogWrite(enA, 255);
-    digitalWrite(in1, dirPin1);
-    digitalWrite(in2, dirPin2);
-    delay(1000);
+  int counter =0;
+  if (isManual) {
+    // Check for the opposite condition when closeDoorFlag is false
+    while (digitalRead(closeDoorFlag ? autoClosePin : autoOpenPin) != HIGH && digitalRead(closeDoorFlag ? manualClosePin : manualOpenPin) != LOW && counter < 3) {
+      analogWrite(enA, 255);
+      digitalWrite(in1, dirPin1);
+      digitalWrite(in2, dirPin2);
+      counter++;
+      delay(1000);
+    }
+  } else {
+    // Check for the opposite condition when closeDoorFlag is false
+    while (digitalRead(closeDoorFlag ? autoClosePin : autoOpenPin) != HIGH && counter < 3) {
+      analogWrite(enA, 255);
+      digitalWrite(in1, dirPin1);
+      digitalWrite(in2, dirPin2);
+      counter ++;
+      delay(1000);
+    }
   }
   digitalWrite(in1, LOW);
   digitalWrite(in2, LOW);
+  delay(3000);
 }
 
 void manual() {
@@ -64,8 +78,8 @@ void manual() {
   int manualOpenSwitchState = digitalRead(manualOpenPin);
 
   if (manualCloseSwitchState == HIGH && manualOpenSwitchState == LOW) {
-    operateDoor(true); // Close the door manually
+    operateDoor(true, true); // Close the door manually
   } else if (manualOpenSwitchState == HIGH && manualCloseSwitchState == LOW) {
-    operateDoor(false); // Open the door manually
+    operateDoor(false, true); // Open the door manually
   }
 }
