@@ -94,7 +94,7 @@ void operateDoor(bool closeDoorFlag, bool isManual) {
   // Stop the motor
   digitalWrite(in1, LOW);
   digitalWrite(in2, LOW);
-  delay(3000);
+  delay(1000);
 }
 
 void manual() {
