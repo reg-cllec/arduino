@@ -1,7 +1,7 @@
 // Pin declarations
 int enA = 10;
-int in1 = 9;
-int in2 = 8;
+int in2 = 9;
+int in1 = 8;
 int lightSensor = A0;
 int doorClosePin = 2;
 int doorOpenPin= 3;
@@ -9,11 +9,14 @@ int manualClosePin = 4;
 int manualOpenPin = 5;
 
 int steps = 0; // Global variable to keep track of motor steps
-int maxSteps = 3;
-int lightSensorThreasHold = 500;
+int maxSteps = 15;
+int lightSensorCloseThreasHold = 200;
+int lightSensorOpenThreasHold = 800;
+int lightSensorCounter = 0;
+int lightSensorDelaySeconds = 3;
 
 void setup() {
-  steps = 0;
+
   pinMode(enA, OUTPUT);
   pinMode(in1, OUTPUT);
   pinMode(in2, OUTPUT);
@@ -33,11 +36,21 @@ void loop() {
 }
 
 void automatic() {  
-  if (digitalRead(doorClosePin) == LOW && analogRead(lightSensor) < lightSensorThreasHold) {
+  // delay 10 minutes to ignore suddenly light change
+  if (analogRead(lightSensor) < lightSensorCloseThreasHold) {
+    lightSensorCounter = lightSensorCounter - 1;
+  }
+  if (analogRead(lightSensor) > lightSensorOpenThreasHold) {
+    lightSensorCounter = lightSensorCounter + 1;
+  }
+
+  if (digitalRead(doorClosePin) == LOW && lightSensorCounter < -lightSensorDelaySeconds) {
     delay(1000);
+    lightSensorCounter = 0;
     operateDoor(true, false); // Close the door
-  } else if ( digitalRead(doorOpenPin) == LOW && analogRead(lightSensor) > lightSensorThreasHold) {
+  } else if ( digitalRead(doorOpenPin) == LOW && lightSensorCounter > lightSensorDelaySeconds) {
     delay(1000);
+    lightSensorCounter = 0;
     operateDoor(false, false); // Open the door
   }
 }
@@ -60,7 +73,7 @@ void operateDoor(bool closeDoorFlag, bool isManual) {
           (closeDoorFlag && digitalRead(doorClosePin) == HIGH) ||
           (!closeDoorFlag && digitalRead(doorOpenPin) == HIGH) ||
           steps == (closeDoorFlag ? 0 : maxSteps)) {
-          // Manual operation switch is turned off, stop the motor
+          // Manual operation switch is turned off, stop the motor or
           // door close/open switch pin is triggered, or the door is fully closed/opened with full steps, stop the motor
           break;
       }
@@ -78,7 +91,12 @@ void operateDoor(bool closeDoorFlag, bool isManual) {
     analogWrite(enA, 255);
     digitalWrite(in1, dirPin1);
     digitalWrite(in2, dirPin2);
-    delay(1000); // Adjust the delay as needed based on your motor's speed
+    delay(500); // keep motor running for xxx sec, Adjust the delay as needed based on your motor's speed
+
+    analogWrite(enA, 255);
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, LOW);
+    delay(500); // pause motor for 1 sec
 
     // Update the steps based on the motor direction
     steps += closeDoorFlag ? -1 : 1;
@@ -96,7 +114,7 @@ void operateDoor(bool closeDoorFlag, bool isManual) {
   // Stop the motor
   digitalWrite(in1, LOW);
   digitalWrite(in2, LOW);
-  delay(1000);
+  delay(3000);
 }
 
 void manual() {
@@ -104,8 +122,10 @@ void manual() {
   int manualOpenSwitchState = digitalRead(manualOpenPin);
 
   if (manualCloseSwitchState == HIGH && manualOpenSwitchState == LOW) {
+    steps = maxSteps;
     operateDoor(true, true); // Close the door manually
   } else if (manualOpenSwitchState == HIGH && manualCloseSwitchState == LOW) {
+    steps = 0;
     operateDoor(false, true); // Open the door manually
   }
 }
