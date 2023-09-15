@@ -4,11 +4,13 @@ int in1 = 9;
 int in2 = 8;
 int lightSensor = A0;
 int doorClosePin = 2;
-int doorOpenPin= 4;
-int manualClosePin = 5;
-int manualOpenPin = 6;
+int doorOpenPin= 3;
+int manualClosePin = 4;
+int manualOpenPin = 5;
 
 int steps = 0; // Global variable to keep track of motor steps
+int maxSteps = 3;
+int lightSensorThreasHold = 500;
 
 void setup() {
   steps = 0;
@@ -31,10 +33,10 @@ void loop() {
 }
 
 void automatic() {  
-  if (digitalRead(doorClosePin) == LOW && analogRead(lightSensor) < 500) {
+  if (digitalRead(doorClosePin) == LOW && analogRead(lightSensor) < lightSensorThreasHold) {
     delay(1000);
     operateDoor(true, false); // Close the door
-  } else if ( digitalRead(doorOpenPin) == LOW && analogRead(lightSensor) > 500) {
+  } else if ( digitalRead(doorOpenPin) == LOW && analogRead(lightSensor) > lightSensorThreasHold) {
     delay(1000);
     operateDoor(false, false); // Open the door
   }
@@ -57,7 +59,7 @@ void operateDoor(bool closeDoorFlag, bool isManual) {
       if (digitalRead(closeDoorFlag ? manualClosePin : manualOpenPin) == LOW ||
           (closeDoorFlag && digitalRead(doorClosePin) == HIGH) ||
           (!closeDoorFlag && digitalRead(doorOpenPin) == HIGH) ||
-          steps == (closeDoorFlag ? 0 : 3)) {
+          steps == (closeDoorFlag ? 0 : maxSteps)) {
           // Manual operation switch is turned off, stop the motor
           // door close/open switch pin is triggered, or the door is fully closed/opened with full steps, stop the motor
           break;
@@ -66,7 +68,7 @@ void operateDoor(bool closeDoorFlag, bool isManual) {
       // Check for automatic operation
       if ((closeDoorFlag && digitalRead(doorClosePin) == HIGH) ||
           (!closeDoorFlag && digitalRead(doorOpenPin) == HIGH) ||
-          steps == (closeDoorFlag ? 0 : 3)) {
+          steps == (closeDoorFlag ? 0 : maxSteps)) {
         // door close/open switch pin is triggered, or the door is fully closed/opened with full steps, stop the motor
         break;
       }
@@ -85,9 +87,9 @@ void operateDoor(bool closeDoorFlag, bool isManual) {
     if (steps < 0) {
       steps = 0;
       break; // Prevent negative step values
-    } else if (steps > 3) {
-      steps = 3;
-      break; // Prevent step values greater than 3
+    } else if (steps > maxSteps) {
+      steps = maxSteps;
+      break; // Prevent step values greater than maxSteps
     }
   }
 
