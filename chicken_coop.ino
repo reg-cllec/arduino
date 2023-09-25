@@ -4,24 +4,19 @@ int in2 = 9;
 int in1 = 8;
 int lightSensor = A0;
 int doorClosePin = 2;
-int doorOpenPin = 3;
+int doorOpenPin= 3;
 int manualClosePin = 4;
 int manualOpenPin = 5;
 
 int steps = 0; // Global variable to keep track of motor steps
 int maxSteps = 15;
-int lightSensorCloseThreshold = 200;
-int lightSensorOpenThreshold = 800;
+int lightSensorCloseThreashold = 200;
+int lightSensorOpenThreashold = 800;
 int lightSensorCounter = 0;
-int lightSensorDelaySeconds = 3;
-
-// Debounce variables
-int lastManualCloseState = HIGH;
-int lastManualOpenState = HIGH;
-unsigned long lastDebounceTime = 0; // Add this line
-unsigned long debounceDelay = 50; // Adjust this value as needed
+int lightSensorDelaySeconds = 0;
 
 void setup() {
+
   pinMode(enA, OUTPUT);
   pinMode(in1, OUTPUT);
   pinMode(in2, OUTPUT);
@@ -33,27 +28,20 @@ void setup() {
 }
 
 void loop() {
-  if (debounce(manualClosePin, lastManualCloseState) || debounce(manualOpenPin, lastManualOpenState)) {
-    manual(); // Check manual switches with debouncing
+  if(digitalRead(manualClosePin) == HIGH || digitalRead(manualOpenPin) == HIGH){
+    manual();    // Check manual switches
   } else {
     automatic(); // Call the automatic function
   }
 }
 
-void automatic() {
-  // delay 10 minutes to ignore sudden light changes
-  if (analogRead(lightSensor) < lightSensorCloseThreshold) {
-    lightSensorCounter--;
-  }
-  if (analogRead(lightSensor) > lightSensorOpenThreshold) {
-    lightSensorCounter++;
-  }
+void automatic() {  
 
-  if (digitalRead(doorClosePin) == LOW && lightSensorCounter < -lightSensorDelaySeconds) {
+  if (digitalRead(doorClosePin) == LOW && analogRead(lightSensor) < lightSensorCloseThreashold) {
     delay(1000);
     lightSensorCounter = 0;
     operateDoor(true, false); // Close the door
-  } else if (digitalRead(doorOpenPin) == LOW && lightSensorCounter > lightSensorDelaySeconds) {
+  } else if ( digitalRead(doorOpenPin) == LOW && analogRead(lightSensor) > lightSensorOpenThreashold) {
     delay(1000);
     lightSensorCounter = 0;
     operateDoor(false, false); // Open the door
@@ -74,13 +62,13 @@ void operateDoor(bool closeDoorFlag, bool isManual) {
   while (true) {
     // Check for manual operation
     if (isManual) {
-      if (debounce(closeDoorFlag ? manualClosePin : manualOpenPin, lastManualCloseState) ||
+      if (digitalRead(closeDoorFlag ? manualClosePin : manualOpenPin) == LOW ||
           (closeDoorFlag && digitalRead(doorClosePin) == HIGH) ||
           (!closeDoorFlag && digitalRead(doorOpenPin) == HIGH) ||
           steps == (closeDoorFlag ? 0 : maxSteps)) {
-        // Manual operation switch is turned off, stop the motor or
-        // door close/open switch pin is triggered, or the door is fully closed/opened with full steps, stop the motor
-        break;
+          // Manual operation switch is turned off, stop the motor or
+          // door close/open switch pin is triggered, or the door is fully closed/opened with full steps, stop the motor
+          break;
       }
     } else {
       // Check for automatic operation
@@ -106,7 +94,7 @@ void operateDoor(bool closeDoorFlag, bool isManual) {
     // Update the steps based on the motor direction
     steps += closeDoorFlag ? -1 : 1;
 
-    // Safety check to prevent the motor from running indefinitely
+    // Safety check to prevent motor from running indefinitely
     if (steps < 0) {
       steps = 0;
       break; // Prevent negative step values
@@ -126,29 +114,11 @@ void manual() {
   int manualCloseSwitchState = digitalRead(manualClosePin);
   int manualOpenSwitchState = digitalRead(manualOpenPin);
 
-  if (debounce(manualClosePin, lastManualCloseState) &&
-      manualCloseSwitchState == HIGH &&
-      manualOpenSwitchState == LOW) {
+  if (manualCloseSwitchState == HIGH && manualOpenSwitchState == LOW) {
     steps = maxSteps;
     operateDoor(true, true); // Close the door manually
-  } else if (debounce(manualOpenPin, lastManualOpenState) &&
-             manualOpenSwitchState == HIGH &&
-             manualCloseSwitchState == LOW) {
+  } else if (manualOpenSwitchState == HIGH && manualCloseSwitchState == LOW) {
     steps = 0;
     operateDoor(false, true); // Open the door manually
-  }
-}
-
-bool debounce(int buttonPin, int &lastButtonState) {
-  int buttonState = digitalRead(buttonPin);
-
-  if (buttonState != lastButtonState) {
-    unsigned long currentMillis = millis();
-
-    if (currentMillis - lastDebounceTime >= debounceDelay) {
-      lastDebounceTime = currentMillis;
-      lastButtonState = buttonState;
-      return true;
-    }
   }
 }
