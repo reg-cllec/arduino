@@ -10,8 +10,8 @@ int manualOpenPin = 5;
 
 int steps = 0; // Global variable to keep track of motor steps
 int maxSteps = 20;
-int lightSensorCloseThreashold = 5;
-int lightSensorOpenThreashold = 500; // 晴天800，阴天500
+int lightSensorCloseThreashold = 100;// delay 30 minutes after 100;
+int lightSensorOpenThreashold = 400; //夏天(晴天800, 阴天500) 冬天(晴天400, 阴天 200)
 int lightSensorCounter = 0;
 int lightSensorDelaySeconds = 0;
 
